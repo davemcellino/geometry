@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eksplorasi Bangun Ruang Pro (Fix Sempurna Final)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0ea5e9; --primary-hover: #0284c7; --bg-dark: #1e293b; --bg-darker: #0f172a; --text-light: #f8fafc; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background-color: #f1f5f9; color: #1e293b; display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar { width: 280px; background-color: var(--bg-dark); color: var(--text-light); display: flex; flex-direction: column; z-index: 10; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar-header { padding: 24px; background-color: var(--bg-darker); text-align: center; }
+        .sidebar-header h1 { font-size: 20px; font-weight: 700; color: var(--primary); }
+        .sidebar-header p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        
+        .shape-list { list-style: none; padding: 12px; flex-grow: 1; overflow-y: auto; }
+        .shape-item { padding: 12px 16px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 14px; font-weight: 500; display: flex; align-items: center; border: 1px solid transparent; }
+        .shape-item:hover { background-color: rgba(14, 165, 233, 0.1); border-color: rgba(14, 165, 233, 0.2); color: var(--primary); }
+        .shape-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); }
+        .shape-icon { margin-right: 12px; font-size: 18px; }
+
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; height: 100%; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 420px; height: 100%; width: 100%; }
+        
+        .canvas-section { position: relative; background: radial-gradient(circle at center, #ffffff 0%, #e2e8f0 100%); display: flex; flex-direction: column; }
+        #canvas-container { width: 100%; flex-grow: 1; outline: none; }
+        .overlay-tools { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; }
+        .tool-chip { background: rgba(255, 255, 255, 0.9); padding: 8px 14px; border-radius: 20px; backdrop-filter: blur(4px); box-shadow: 0 2px 10px rgba(0,0,0,0.05); font-size: 12px; font-weight: 500; color: #475569; pointer-events: auto; display: flex; align-items: center; gap: 8px;}
+        
+        .panel-section { background-color: white; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow-y: auto; }
+        .panel-block { padding: 20px; border-bottom: 1px solid #f1f5f9; }
+        .panel-title { font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 14px; display: flex; align-items: center; }
+        .panel-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: var(--primary); margin-right: 8px; border-radius: 2px; }
+        
+        .control-group { margin-bottom: 14px; }
+        .control-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px; }
+        .control-label span.value { color: var(--primary); font-weight: 600; }
+        .slider-input { width: 100%; -webkit-appearance: none; height: 6px; border-radius: 3px; background: #e2e8f0; outline: none; }
+        .slider-input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .btn-action { width: 100%; padding: 10px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px;}
+        .btn-action:hover { background-color: #e2e8f0; }
+        .btn-primary { background-color: var(--primary); color: white; border: none; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .learning-features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .feature-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: #475569; cursor: pointer; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;}
+        .feature-toggle input { cursor: pointer; }
+
+        .quiz-section { background-color: #fffbeb; border: 1px solid #fde68a; padding: 16px; border-radius: 10px; margin-top: 16px; display: none; }
+        .quiz-section h4 { font-size: 13px; color: #b45309; margin-bottom: 10px; }
+        .quiz-input { width: 100%; padding: 8px 12px; border: 1px solid #fcd34d; border-radius: 6px; margin-bottom: 8px; font-size: 13px; outline: none;}
+        .quiz-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+        .quiz-feedback { font-size: 12px; font-weight: 600; margin-top: 8px; text-align: center; }
+
+        .metrics-container { display: block; }
+        .metric-card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+        .metric-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+        .metric-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .formula-box { background-color: var(--bg-darker); color: #e2e8f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-top: 8px; overflow-x: auto; }
+        .step-calculation { font-size: 11px; color: #64748b; margin-top: 6px; line-height: 1.5; }
+
+        @media (max-width: 1024px) {
+            body { flex-direction: column; overflow: auto; height: auto; }
+            .sidebar { width: 100%; height: auto; }
+            .dashboard-grid { grid-template-columns: 1fr; grid-template-rows: 500px auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>GEOMETRI 3D PRO</h1>
+            <p>Visualisasi Akurat & Mode Belajar</p>
+        </div>
+        <ul class="shape-list">
+            <li class="shape-item active" data-shape="kubus"><span class="shape-icon">🧊</span> Kubus</li>
+            <li class="shape-item" data-shape="balok"><span class="shape-icon">📦</span> Balok</li>
+            <li class="shape-item" data-shape="prisma"><span class="shape-icon">📐</span> Prisma Segitiga</li>
+            <li class="shape-item" data-shape="limas"><span class="shape-icon">🔺</span> Limas Segiempat</li>
+            <li class="shape-item" data-shape="tabung"><span class="shape-icon">🛢️</span> Tabung</li>
+            <li class="shape-item" data-shape="kerucut"><span class="shape-icon">🍦</span> Kerucut</li>
+            <li class="shape-item" data-shape="bola"><span class="shape-icon">⚽</span> Bola</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="dashboard-grid">
+            
+            <div class="canvas-section">
+                <div id="canvas-container"></div>
+                <div class="overlay-tools">
+                    <div class="tool-chip">🖱️ Kiri: Putar | Kanan: Geser | Scroll: Zoom</div>
+                    <div class="tool-chip" id="anim-status" style="color: var(--primary);">Bentuk 3D</div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                
+                <div class="panel-block">
+                    <h2 class="panel-title" id="shape-title">Kubus</h2>
+                    <div id="dynamic-sliders"></div>
+                    
+                    <div class="control-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #cbd5e1;">
+                        <div class="control-label">
+                            <span>Buka Jaring-Jaring</span>
+                            <span class="value" id="unfold-val">0%</span>
+                        </div>
+                        <input type="range" id="slider-unfold" class="slider-input" min="0" max="100" value="0">
+                        <button class="btn-action" id="btn-anim" onclick="toggleAnimation()">▶️ Putar Animasi Otomatis</button>
+                    </div>
+                </div>
+
+                <div class="panel-block">
+                    <h3 class="panel-title">Fitur Pembelajaran</h3>
+                    <div class="learning-features">
+                        <label class="feature-toggle">
+                            <input type="checkbox" id="toggle-wireframe"> 🩻 Mode Rangka (Tembus)
+                        </label>
+                        <label class="feature-toggle">
+                            <input type="checkbox" id="toggle-quiz"> 🎯 Mode Latihan
+                        </label>
+                    </div>
+
+                    <div class="quiz-section" id="quiz-container">
+                        <h4>Uji Pemahamanmu!</h4>
+                        <input type="number" id="quiz-vol" class="quiz-input" placeholder="Tebak Volume (cm³)">
+                        <input type="number" id="quiz-lp" class="quiz-input" placeholder="Tebak Luas Permukaan (cm²)">
+                        <button class="btn-action btn-primary" onclick="checkQuiz()">Cek Jawaban</button>
+                        <div id="quiz-feedback" class="quiz-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="panel-block" id="metrics-container" style="flex-grow: 1;">
+                    <h3 class="panel-title">Kalkulasi Otomatis</h3>
+                    
+                    <div class="metric-card">
+                        <div class="metric-title">Volume (V)</div>
+                        <div class="metric-value" id="vol-value">0 cm³</div>
+                        <div class="formula-box" id="vol-formula">V = ...</div>
+                        <div class="step-calculation" id="vol-calc">Hitung...</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-title">Luas Permukaan (L)</div>
+                        <div class="metric-value" id="lp-value">0 cm²</div>
+                        <div class="formula-box" id="lp-formula">L = ...</div>
+                        <div class="step-calculation" id="lp-calc">Hitung...</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI BANGUN RUANG ---
+        const shapeConfig = {
+            kubus: { title: "Kubus", sliders: [{ id: 's', label: 'Sisi (s)', min: 2, max: 6, step: 0.1, default: 4 }] },
+            balok: { title: "Balok", sliders: [ { id: 'p', label: 'Panjang (p)', min: 2, max: 7, step: 0.1, default: 5 }, { id: 'l', label: 'Lebar (l)', min: 2, max: 6, step: 0.1, default: 3 }, { id: 't', label: 'Tinggi (t)', min: 2, max: 6, step: 0.1, default: 4 } ] },
+            prisma: { title: "Prisma Segitiga (Sama Kaki)", sliders: [ { id: 'a', label: 'Alas Segitiga (a)', min: 2, max: 6, step: 0.1, default: 4 }, { id: 'ts', label: 'Tinggi Segitiga (ts)', min: 2, max: 5, step: 0.1, default: 3 }, { id: 'tp', label: 'Panjang Prisma (tp)', min: 3, max: 7, step: 0.1, default: 5 } ] },
+            limas: { title: "Limas Segiempat", sliders: [ { id: 's', label: 'Sisi Alas (s)', min: 2, max: 6, step: 0.1, default: 4 }, { id: 't', label: 'Tinggi Limas (t)', min: 2, max: 6, step: 0.1, default: 5 } ] },
+            tabung: { title: "Tabung", sliders: [ { id: 'r', label: 'Jari-jari (r)', min: 1, max: 3.5, step: 0.1, default: 2 }, { id: 't', label: 'Tinggi (t)', min: 3, max: 7, step: 0.1, default: 5 } ] },
+            kerucut: { title: "Kerucut", sliders: [ { id: 'r', label: 'Jari-jari (r)', min: 1, max: 3.5, step: 0.1, default: 2 }, { id: 't', label: 'Tinggi (t)', min: 3, max: 7, step: 0.1, default: 5 } ] },
+            bola: { title: "Bola", sliders: [{ id: 'r', label: 'Jari-jari (r)', min: 1, max: 3.5, step: 0.1, default: 2.5 }] }
+        };
+
+        let currentShape = 'kubus';
+        let unfoldProgress = 0;
+        let shapeParams = {};
+        let isWireframe = false;
+        let isQuizMode = false;
+        let isAnimating = false;
+        let animDir = 1;
+        let actualVol = 0, actualLp = 0;
+
+        // --- THREE.JS INIT ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(10, 10, 14);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.dampingFactor = 0.05;
+        controls.target.set(0, 0, 0);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); dirLight.position.set(10, 20, 10); scene.add(dirLight);
+        const backLight = new THREE.DirectionalLight(0x0ea5e9, 0.3); backLight.position.set(-10, -10, -10); scene.add(backLight);
+
+        const gridHelper = new THREE.GridHelper(20, 20, 0x94a3b8, 0xe2e8f0);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        const shapeGroup = new THREE.Group(); scene.add(shapeGroup);
+
+        // --- MATERIALS & HELPERS ---
+        const colors = [0xef4444, 0x3b82f6, 0x10b981, 0xf59e0b, 0x8b5cf6, 0xec4899];
+        function getMat(idx) {
+            return new THREE.MeshStandardMaterial({
+                color: colors[idx % colors.length], side: THREE.DoubleSide,
+                transparent: true, opacity: isWireframe ? 0.15 : 0.85,
+                wireframe: isWireframe, roughness: 0.4
+            });
+        }
+        const outlineMat = new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 2 });
+        function addOutline(mesh, geom) {
+            const edges = new THREE.EdgesGeometry(geom);
+            const line = new THREE.LineSegments(edges, outlineMat);
+            mesh.add(line);
+        }
+
+        // ==========================================
+        //  FUNGSI BANTUAN GENERATOR BIDANG FLAT
+        // ==========================================
+        function createPlaneBalok(w, h, colorIdx) {
+            const g = new THREE.PlaneGeometry(w, h);
+            g.translate(0, h/2, 0); 
+            const m = new THREE.Mesh(g, getMat(colorIdx));
+            addOutline(m, g);
+            return m;
+        }
+
+        function createFlap(type, w, h, dir, colorIdx) {
+            const geom = new THREE.BufferGeometry();
+            let v;
+            if (type === 'rect') {
+                if (dir === 'front') v = [-w/2,0,0, w/2,0,0, w/2,0,h, -w/2,0,h, -w/2,0,0, w/2,0,h];
+                if (dir === 'back')  v = [w/2,0,0, -w/2,0,0, -w/2,0,-h, w/2,0,-h, w/2,0,0, -w/2,0,-h];
+                if (dir === 'left')  v = [0,0,h/2, 0,0,-h/2, -w,0,-h/2, -w,0,h/2, 0,0,h/2, -w,0,-h/2];
+                if (dir === 'right') v = [0,0,-h/2, 0,0,h/2, w,0,h/2, w,0,-h/2, 0,0,-h/2, w,0,h/2];
+            } else if (type === 'tri') {
+                if (dir === 'front') v = [-w/2,0,0, w/2,0,0, 0,0,h];
+                if (dir === 'back')  v = [w/2,0,0, -w/2,0,0, 0,0,-h];
+                if (dir === 'left')  v = [0,0,-w/2, 0,0,w/2, -h,0,0];
+                if (dir === 'right') v = [0,0,w/2, 0,0,-w/2, h,0,0];
+            }
+            geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(v), 3));
+            geom.computeVertexNormals();
+            const m = new THREE.Mesh(geom, getMat(colorIdx));
+            addOutline(m, geom);
+            return m;
+        }
+
+        // ==========================================
+        //  1. KUBUS & BALOK (FIX ATAP TERTUTUP RAPAT)
+        // ==========================================
+        function buildKubusBalok(p, l, t, u) {
+            const fold = u * (Math.PI / 2);
+
+            const mBase = new THREE.Mesh(new THREE.PlaneGeometry(p, l), getMat(0));
+            mBase.rotation.x = -Math.PI/2;
+            addOutline(mBase, mBase.geometry);
+            shapeGroup.add(mBase);
+
+            const mFront = createPlaneBalok(p, t, 1);
+            const hFront = new THREE.Group(); hFront.position.set(0, 0, l/2);
+            hFront.add(mFront); hFront.rotation.x = fold; 
+            shapeGroup.add(hFront);
+
+            const mBack = createPlaneBalok(p, t, 2); mBack.rotation.y = Math.PI; 
+            const hBack = new THREE.Group(); hBack.position.set(0, 0, -l/2);
+            hBack.add(mBack); hBack.rotation.x = -fold; 
+            shapeGroup.add(hBack);
+
+            const mLeft = createPlaneBalok(l, t, 3); mLeft.rotation.y = -Math.PI/2; 
+            const hLeft = new THREE.Group(); hLeft.position.set(-p/2, 0, 0);
+            hLeft.add(mLeft); hLeft.rotation.z = fold; 
+            shapeGroup.add(hLeft);
+
+            // FIX: Menggunakan mRight yang benar, bukan mR
+            const mRight = createPlaneBalok(l, t, 4); mRight.rotation.y = Math.PI/2; 
+            const hRight = new THREE.Group(); hRight.position.set(p/2, 0, 0);
+            hRight.add(mRight); hRight.rotation.z = -fold; 
+            shapeGroup.add(hRight);
+
+            const gT = new THREE.PlaneGeometry(p, l);
+            gT.translate(0, l/2, 0); 
+            const mT = new THREE.Mesh(gT, getMat(5));
+            const hT = new THREE.Group(); 
+            hT.position.set(0, t, 0); 
+            hT.add(mT);
+            // FIX: Rotasi negatif agar menutup rapat ke dalam
+            hT.rotation.x = -(1 - u) * (Math.PI / 2); 
+            addOutline(mT, gT);
+            mBack.add(hT); 
+        }
+
+        // ==========================================
+        //  2. LIMAS SEGIEMPAT (PERFECT - TIDAK DIUBAH)
+        // ==========================================
+        function buildLimas(s, t, u) {
+            const mBase = new THREE.Mesh(new THREE.PlaneGeometry(s, s), getMat(0));
+            mBase.rotation.x = -Math.PI/2; 
+            addOutline(mBase, mBase.geometry);
+            shapeGroup.add(mBase);
+
+            const sh = Math.sqrt(Math.pow(s/2, 2) + Math.pow(t, 2));
+            
+            const hF = new THREE.Group(); hF.position.set(0, 0, s/2);
+            hF.add(createFlap('tri', s, sh, 'front', 1));
+            hF.rotation.x = (1-u) * Math.atan2(-t, -s/2);
+            shapeGroup.add(hF);
+
+            const hB = new THREE.Group(); hB.position.set(0, 0, -s/2);
+            hB.add(createFlap('tri', s, sh, 'back', 2));
+            hB.rotation.x = (1-u) * Math.atan2(t, -s/2);
+            shapeGroup.add(hB);
+
+            const hL = new THREE.Group(); hL.position.set(-s/2, 0, 0);
+            hL.add(createFlap('tri', s, sh, 'left', 3));
+            hL.rotation.z = (1-u) * Math.atan2(-t, -s/2);
+            shapeGroup.add(hL);
+
+            const hR = new THREE.Group(); hR.position.set(s/2, 0, 0);
+            hR.add(createFlap('tri', s, sh, 'right', 4));
+            hR.rotation.z = (1-u) * Math.atan2(t, -s/2);
+            shapeGroup.add(hR);
+        }
+
+        // ==========================================
+        //  3. PRISMA SEGITIGA (PERFECT - TIDAK DIUBAH)
+        // ==========================================
+        function buildPrisma(a, ts, tp, u) {
+            const mBase = new THREE.Mesh(new THREE.PlaneGeometry(a, tp), getMat(0));
+            mBase.rotation.x = -Math.PI/2; 
+            addOutline(mBase, mBase.geometry);
+            shapeGroup.add(mBase);
+
+            const sl = Math.sqrt(Math.pow(a/2, 2) + Math.pow(ts, 2));
+
+            const hL = new THREE.Group(); hL.position.set(-a/2, 0, 0);
+            hL.add(createFlap('rect', sl, tp, 'left', 1));
+            hL.rotation.z = (1-u) * Math.atan2(-ts, -a/2);
+            shapeGroup.add(hL);
+
+            const hR = new THREE.Group(); hR.position.set(a/2, 0, 0);
+            hR.add(createFlap('rect', sl, tp, 'right', 2));
+            hR.rotation.z = (1-u) * Math.atan2(ts, -a/2);
+            shapeGroup.add(hR);
+
+            const hF = new THREE.Group(); hF.position.set(0, 0, tp/2);
+            hF.add(createFlap('tri', a, ts, 'front', 3));
+            hF.rotation.x = (1-u) * (-Math.PI/2);
+            shapeGroup.add(hF);
+
+            const hB = new THREE.Group(); hB.position.set(0, 0, -tp/2);
+            hB.add(createFlap('tri', a, ts, 'back', 4));
+            hB.rotation.x = (1-u) * (Math.PI/2);
+            shapeGroup.add(hB);
+        }
+
+        // ==========================================
+        //  4. TABUNG, KERUCUT, BOLA
+        // ==========================================
+        function buildTabung(r, t, u) {
+            const segs = 36; const w = (2*Math.PI*r)/segs;
+            const g = new THREE.PlaneGeometry(w, t);
+            for(let i=0; i<segs; i++){
+                const m = new THREE.Mesh(g, getMat(1)); addOutline(m, g);
+                const a = (i+0.5)*(2*Math.PI/segs);
+                m.position.set((1-u)*(r*Math.sin(a)) + u*(-Math.PI*r + (i+0.5)*w), t/2, (1-u)*(r*Math.cos(a)));
+                m.rotation.y = (1-u)*a;
+                shapeGroup.add(m);
+            }
+            const cg = new THREE.CircleGeometry(r, 32);
+            const mBot = new THREE.Mesh(cg, getMat(0)); mBot.rotation.x = -Math.PI/2;
+            mBot.position.z = u*(-t/2 - r); addOutline(mBot, cg); shapeGroup.add(mBot);
+            const mTop = new THREE.Mesh(cg, getMat(2)); mTop.rotation.x = -Math.PI/2;
+            mTop.position.set(0, (1-u)*t, u*(t/2 + r)); addOutline(mTop, cg); shapeGroup.add(mTop);
+        }
+
+        function buildKerucut(r, t, u) {
+            const sh = Math.sqrt(r*r + t*t); const segs = 36; const arc = 2*Math.PI*(r/sh);
+            const geom = new THREE.BufferGeometry(); const v = new Float32Array((segs+1)*9);
+            let idx = 0;
+            for(let i=0; i<segs; i++){
+                const ax = 0, ay = (1-u)*t, az = u*(-sh/2);
+                const a1 = i*(2*Math.PI/segs), p1 = (i-segs/2)*(arc/segs);
+                const x1 = (1-u)*(r*Math.sin(a1)) + u*(sh*Math.sin(p1));
+                const z1 = (1-u)*(r*Math.cos(a1)) + u*(-sh/2 + sh*Math.cos(p1));
+                const a2 = (i+1)*(2*Math.PI/segs), p2 = (i+1-segs/2)*(arc/segs);
+                const x2 = (1-u)*(r*Math.sin(a2)) + u*(sh*Math.sin(p2));
+                const z2 = (1-u)*(r*Math.cos(a2)) + u*(-sh/2 + sh*Math.cos(p2));
+                v.set([ax,ay,az, x1,0,z1, x2,0,z2], idx); idx+=9;
+            }
+            geom.setAttribute('position', new THREE.BufferAttribute(v,3)); geom.computeVertexNormals();
+            const m = new THREE.Mesh(geom, getMat(1)); addOutline(m, geom); shapeGroup.add(m);
+            const cg = new THREE.CircleGeometry(r, 32); const mb = new THREE.Mesh(cg, getMat(0));
+            mb.rotation.x = -Math.PI/2; mb.position.z = u*(sh/2 + r); addOutline(mb, cg); shapeGroup.add(mb);
+        }
+
+        function buildBola(r, u) {
+            const gores = 12; const phiW = (2*Math.PI)/gores;
+            for(let i=0; i<gores; i++){
+                const mid = i*phiW + phiW/2;
+                const g = new THREE.SphereGeometry(r, 16, 16, i*phiW, phiW, 0, Math.PI);
+                g.translate(0, r, 0); 
+                const m = new THREE.Mesh(g, getMat(i)); addOutline(m, g);
+                if(u>0) {
+                    m.position.set(u*r*1.5*Math.sin(mid), 0, u*r*1.5*Math.cos(mid));
+                    m.rotation.set(u*Math.cos(mid)*Math.PI/2, 0, -u*Math.sin(mid)*Math.PI/2);
+                }
+                shapeGroup.add(m);
+            }
+        }
+
+        // --- CORE UPDATE ---
+        function updateGeometry() {
+            while(shapeGroup.children.length > 0) shapeGroup.remove(shapeGroup.children[0]);
+            const p = shapeParams;
+            
+            if(currentShape==='kubus') buildKubusBalok(p.s, p.s, p.s, unfoldProgress);
+            else if(currentShape==='balok') buildKubusBalok(p.p, p.l, p.t, unfoldProgress);
+            else if(currentShape==='limas') buildLimas(p.s, p.t, unfoldProgress);
+            else if(currentShape==='prisma') buildPrisma(p.a, p.ts, p.tp, unfoldProgress);
+            else if(currentShape==='tabung') buildTabung(p.r, p.t, unfoldProgress);
+            else if(currentShape==='kerucut') buildKerucut(p.r, p.t, unfoldProgress);
+            else if(currentShape==='bola') buildBola(p.r, unfoldProgress);
+
+            calculateMetrics();
+            document.getElementById('anim-status').innerText = unfoldProgress === 0 ? "Bentuk 3D" : (unfoldProgress === 1 ? "Jaring Datar" : "Proses Buka...");
+        }
+
+        function calculateMetrics() {
+            let vol = 0, lp = 0, vc = "", lc = ""; const pi = Math.PI; const p = shapeParams;
+            
+            if(currentShape==='kubus') {
+                vol = Math.pow(p.s, 3); lp = 6 * Math.pow(p.s, 2);
+                document.getElementById('vol-formula').innerText = "V = s³";
+                document.getElementById('lp-formula').innerText = "L = 6 × s²";
+                vc = `V = ${p.s}³ = ${vol.toFixed(2)}`;
+                lc = `L = 6 × ${p.s}² = ${lp.toFixed(2)}`;
+            } else if(currentShape==='balok') {
+                vol = p.p * p.l * p.t; lp = 2*(p.p*p.l + p.p*p.t + p.l*p.t);
+                document.getElementById('vol-formula').innerText = "V = p × l × t";
+                document.getElementById('lp-formula').innerText = "L = 2 × (pl + pt + lt)";
+                vc = `V = ${p.p} × ${p.l} × ${p.t} = ${vol.toFixed(2)}`;
+                lc = `L = 2 × (${(p.p*p.l).toFixed(2)} + ${(p.p*p.t).toFixed(2)} + ${(p.l*p.t).toFixed(2)}) = ${lp.toFixed(2)}`;
+            } else if(currentShape==='prisma') {
+                const la = 0.5 * p.a * p.ts; const sm = Math.sqrt(Math.pow(p.a/2,2) + p.ts*p.ts);
+                vol = la * p.tp; lp = 2*la + (p.a + 2*sm)*p.tp;
+                document.getElementById('vol-formula').innerText = "V = Luas Alas × Tinggi Prisma";
+                document.getElementById('lp-formula').innerText = "L = 2×Luas Alas + Keliling Alas×Tinggi";
+                vc = `Luas Alas = 0.5 × ${p.a} × ${p.ts} = ${la.toFixed(2)}\nV = ${la.toFixed(2)} × ${p.tp} = ${vol.toFixed(2)}`;
+                lc = `L = 2×${la.toFixed(2)} + (${p.a} + 2×${sm.toFixed(2)}) × ${p.tp} = ${lp.toFixed(2)}`;
+            } else if(currentShape==='limas') {
+                const la = p.s * p.s; const ts = Math.sqrt(Math.pow(p.s/2,2) + p.t*p.t);
+                vol = (1/3) * la * p.t; lp = la + 4*(0.5 * p.s * ts);
+                document.getElementById('vol-formula').innerText = "V = 1/3 × Luas Alas × Tinggi";
+                document.getElementById('lp-formula').innerText = "L = Luas Alas + 4 × Luas Sisi Tegak";
+                vc = `V = 1/3 × ${la.toFixed(2)} × ${p.t} = ${vol.toFixed(2)}`;
+                lc = `Tinggi Selimut = ${ts.toFixed(2)}\nL = ${la.toFixed(2)} + 4×(0.5×${p.s}×${ts.toFixed(2)}) = ${lp.toFixed(2)}`;
+            } else if(currentShape==='tabung') {
+                vol = pi * p.r * p.r * p.t; lp = 2*pi*p.r*(p.r+p.t);
+                document.getElementById('vol-formula').innerText = "V = π × r² × t";
+                document.getElementById('lp-formula').innerText = "L = 2 × π × r × (r + t)";
+                vc = `V = 3.14 × ${p.r}² × ${p.t} = ${vol.toFixed(2)}`;
+                lc = `L = 2 × 3.14 × ${p.r} × (${p.r}+${p.t}) = ${lp.toFixed(2)}`;
+            } else if(currentShape==='kerucut') {
+                const s = Math.sqrt(p.r*p.r + p.t*p.t);
+                vol = (1/3) * pi * p.r * p.r * p.t; lp = pi * p.r * (p.r + s);
+                document.getElementById('vol-formula').innerText = "V = 1/3 × π × r² × t";
+                document.getElementById('lp-formula').innerText = "L = π × r × (r + s)";
+                vc = `V = 1/3 × 3.14 × ${p.r}² × ${p.t} = ${vol.toFixed(2)}`;
+                lc = `s = ${s.toFixed(2)}\nL = 3.14 × ${p.r} × (${p.r}+${s.toFixed(2)}) = ${lp.toFixed(2)}`;
+            } else if(currentShape==='bola') {
+                vol = (4/3) * pi * Math.pow(p.r, 3); lp = 4 * pi * p.r * p.r;
+                document.getElementById('vol-formula').innerText = "V = 4/3 × π × r³";
+                document.getElementById('lp-formula').innerText = "L = 4 × π × r²";
+                vc = `V = 4/3 × 3.14 × ${p.r}³ = ${vol.toFixed(2)}`;
+                lc = `L = 4 × 3.14 × ${p.r}² = ${lp.toFixed(2)}`;
+            }
+
+            actualVol = parseFloat(vol.toFixed(2));
+            actualLp = parseFloat(lp.toFixed(2));
+
+            document.getElementById('vol-value').innerText = `${vol.toLocaleString('id-ID', {maximumFractionDigits:2})} cm³`;
+            document.getElementById('lp-value').innerText = `${lp.toLocaleString('id-ID', {maximumFractionDigits:2})} cm²`;
+            document.getElementById('vol-calc').innerText = vc;
+            document.getElementById('lp-calc').innerText = lc;
+        }
+
+        // --- UI & EVENTS ---
+        function initSliders() {
+            const container = document.getElementById('dynamic-sliders'); container.innerHTML = '';
+            shapeConfig[currentShape].sliders.forEach(s => {
+                shapeParams[s.id] = s.default;
+                container.innerHTML += `
+                    <div class="control-group">
+                        <div class="control-label"><span>${s.label}</span><span class="value" id="val-${s.id}">${s.default}</span></div>
+                        <input type="range" id="slider-${s.id}" class="slider-input" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.default}">
+                    </div>`;
+            });
+            shapeConfig[currentShape].sliders.forEach(s => {
+                document.getElementById(`slider-${s.id}`).addEventListener('input', (e) => {
+                    shapeParams[s.id] = parseFloat(e.target.value);
+                    document.getElementById(`val-${s.id}`).innerText = shapeParams[s.id];
+                    updateGeometry();
+                    document.getElementById('quiz-feedback').innerText = ''; 
+                });
+            });
+        }
+
+        document.querySelectorAll('.shape-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                document.querySelectorAll('.shape-item').forEach(i => i.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                currentShape = e.currentTarget.getAttribute('data-shape');
+                document.getElementById('shape-title').innerText = shapeConfig[currentShape].title;
+                unfoldProgress = 0; document.getElementById('slider-unfold').value = 0;
+                document.getElementById('unfold-val').innerText = '0%';
+                document.getElementById('quiz-feedback').innerText = '';
+                initSliders(); updateGeometry(); controls.reset();
+            });
+        });
+
+        document.getElementById('slider-unfold').addEventListener('input', (e) => {
+            if(isAnimating) toggleAnimation();
+            unfoldProgress = e.target.value / 100;
+            document.getElementById('unfold-val').innerText = `${e.target.value}%`;
+            updateGeometry();
+        });
+
+        function toggleAnimation() {
+            isAnimating = !isAnimating;
+            document.getElementById('btn-anim').innerHTML = isAnimating ? "⏸️ Jeda Animasi" : "▶️ Putar Animasi Otomatis";
+        }
+
+        document.getElementById('toggle-wireframe').addEventListener('change', (e) => {
+            isWireframe = e.target.checked; updateGeometry();
+        });
+
+        document.getElementById('toggle-quiz').addEventListener('change', (e) => {
+            isQuizMode = e.target.checked;
+            document.getElementById('metrics-container').style.display = isQuizMode ? 'none' : 'block';
+            document.getElementById('quiz-container').style.display = isQuizMode ? 'block' : 'none';
+            document.getElementById('quiz-feedback').innerText = '';
+        });
+
+        function checkQuiz() {
+            const guessV = parseFloat(document.getElementById('quiz-vol').value);
+            const guessL = parseFloat(document.getElementById('quiz-lp').value);
+            let msg = "";
+            
+            const vCorrect = Math.abs(guessV - actualVol) < 0.5;
+            const lCorrect = Math.abs(guessL - actualLp) < 0.5;
+
+            if (vCorrect && lCorrect) {
+                msg = "🎉 Luar Biasa! Kedua jawabanmu tepat!";
+                document.getElementById('quiz-feedback').style.color = "#10b981";
+            } else if (vCorrect) {
+                msg = "👍 Volume Benar! Ayo coba perbaiki Luas Permukaannya.";
+                document.getElementById('quiz-feedback').style.color = "#f59e0b";
+            } else if (lCorrect) {
+                msg = "👍 Luas Permukaan Benar! Ayo coba perbaiki Volumenya.";
+                document.getElementById('quiz-feedback').style.color = "#f59e0b";
+            } else {
+                msg = "❌ Keduanya belum tepat. Ayo periksa kembali rumusnya!";
+                document.getElementById('quiz-feedback').style.color = "#ef4444";
+            }
+            document.getElementById('quiz-feedback').innerText = msg;
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(isAnimating) {
+                let v = parseInt(document.getElementById('slider-unfold').value);
+                v += animDir * 1;
+                if(v >= 100) { v = 100; animDir = -1; }
+                if(v <= 0) { v = 0; animDir = 1; }
+                document.getElementById('slider-unfold').value = v;
+                document.getElementById('unfold-val').innerText = `${v}%`;
+                unfoldProgress = v / 100;
+                updateGeometry();
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        initSliders(); updateGeometry(); animate();
+    </script>
+</body>
+</html>
